@@ -8,6 +8,8 @@ Created on Mon May  2 19:06:40 2016
 ##FOrest is a list of graphs
 
 import networkx as nx
+from dist_to_root import dist_to_root
+
 def finding_aug_path(G,M):
     Forest = [] #Storing the Forests
     Path = []# The final path - HOW DO WE STORE A PATH?? as a Graph in itself? List of Nodes!!
@@ -36,7 +38,7 @@ def finding_aug_path(G,M):
         counter = counter + 1
 
     
-    for vertex_number in xrange(len(unmarked_nodes)): #Explicitly need a while loop?
+    for vertex_number in range(len(unmarked_nodes)): #Explicitly need a while loop?
         v = unmarked_nodes[vertex_number]
         in_Forest = 0; #boolean for if unmarked v is 'within the forest or not'
         root_of_v = None
@@ -53,16 +55,16 @@ def finding_aug_path(G,M):
         if (in_Forest==1 and dist_to_root(v,root_of_v,Forest[node_to_tree[v]])%2 == 0):
             ##Do something
             edges_v = Forest[tree_number_of_v].edges(v)
-            for edge_number in xrange(len(edges_v)):
+            for edge_number in range(len(edges_v)):
                 e = edges_v[edge_number]
-                if (e in unmarked_edges and not(e==[]):
+                if e in unmarked_edges and e != []:
                     #DO something
                     w = e[1]# the other vertex of the unmarked edge
                     w_in_Forest = 0; ##Indicator for w in F or not
                     
                     ##Go through all the trees in the forest
                     tree_of_w = None
-                    for tree_number in xrange(len(Forest)):
+                    for tree_number in range(len(Forest)):
                         tree = Forest[tree_number]
                         if tree.has_node(w) == True:
                             w_in_Forest = 1
@@ -80,6 +82,7 @@ def finding_aug_path(G,M):
                     else: ## w is in Forest
                         if dist_to_root(w,root_of_w,Forest[tree_num_of_w])%2 == 1:
                             ##Do Nothing
+                            pass
                         else:
                             if (tree_num_of_v == tree_num_of_w):
                                 ##Shortest path from root(v)--->(v)-->w---->root(w)

@@ -3,28 +3,26 @@ import numpy as np
 import copy
 import time
 
+from dist_to_root import dist_to_root
+
 def find_maximum_matching(G,M):
     P = finding_aug_path(G,M)
     if P == []:#Base Case
         return M
     else: #Augment P to M
         ##Add the alternating edges of P to M
-        for i in xrange(0,len(P)-2,2): 
+        for i in range(0,len(P)-2,2): 
             M.add_edge(P[i],P[i+1])
             M.remove_edge(P[i+1],P[i+2])
         M.add_edge(P[-2],P[-1])
         return find_maximum_matching(G,M)
 
-def dist_to_root(point,root,Graph):
-    path = nx.shortest_path(Graph, source = point, target = root)
-    return (len(path)-1)
-    
 def generate_random_graph(n,density=0.5):
     ## n - number of nodes
     ## d - "density" of the graph [0,1]
     graph = nx.Graph()
-    for i in xrange(n):
-        for j in xrange(i+1,n):
+    for i in range(n):
+        for j in range(i+1,n):
             if np.random.uniform() < density:
                 graph.add_edge(i,j)
     return graph 
@@ -60,14 +58,14 @@ def finding_aug_path(G,M,Blossom_stack=[]):
     for v in Forest_nodes:  
         root_of_v = None
         tree_num_of_v = None
-        for tree_number in xrange(len(Forest)): 
+        for tree_number in range(len(Forest)): 
             tree_in = Forest[tree_number]
             if tree_in.has_node(v) == True:
                 root_of_v = tree_to_root[tree_number]
                 tree_num_of_v = tree_number
                 break #Break out of the for loop
         edges_v = list(G.edges(v))
-        for edge_number in xrange(len(edges_v)): 
+        for edge_number in range(len(edges_v)): 
             e = edges_v[edge_number]
             e2 = (e[1],e[0]) #the edge in the other order
             if ((e in unmarked_edges or e2 in unmarked_edges) and e!=[]):
@@ -77,7 +75,7 @@ def finding_aug_path(G,M,Blossom_stack=[]):
                 ##Go through all the trees in the forest to check if w in F
                 tree_of_w = None
                 tree_num_of_w = None
-                for tree_number in xrange(len(Forest)):
+                for tree_number in range(len(Forest)):
                     tree = Forest[tree_number]
                     if tree.has_node(w) == True:
                         w_in_Forest = 1
@@ -151,9 +149,9 @@ def finding_aug_path(G,M,Blossom_stack=[]):
                                 if blossom[0] != base:
                                     based_blossom = []
                                     base_idx = blossom.index(base)
-                                    for i in xrange(base_idx,len(blossom)-1):
+                                    for i in range(base_idx,len(blossom)-1):
                                         based_blossom.append(blossom[i])
-                                    for i in xrange(0,base_idx):
+                                    for i in range(0,base_idx):
                                         based_blossom.append(blossom[i])
                                     based_blossom.append(base)
                                 else:
@@ -196,7 +194,7 @@ def finding_aug_path(G,M,Blossom_stack=[]):
                                                     # make sure we're adding the even part to lifted path
                                                     if i%2 == 0: # same dir path
                                                         lifted_blossom = based_blossom[:i+1]
-                                                        #print lifted_blossom
+                                                        #print(lifted_blossom)
                                                     else: # opposite dir path
                                                         lifted_blossom = list(reversed(based_blossom))[:-i]
                                                 i += 1
@@ -219,10 +217,10 @@ def finding_aug_path(G,M,Blossom_stack=[]):
                                                     # make sure we're adding the even part to lifted path
                                                     if i%2 == 0: # same dir path
                                                         lifted_blossom = based_blossom[:i+1] 
-                                                        # print lifted_blossom
+                                                        # print(lifted_blossom)
                                                     else: # opposite dir path
                                                         lifted_blossom = list(reversed(based_blossom))[:-i]
-                                                        # print lifted_blossom
+                                                        # print(lifted_blossom)
                                                 i += 1
                                             return L_stem + lifted_blossom + R_stem
                                     else: 
@@ -259,44 +257,44 @@ if __name__ == '__main__':
     results = np.ndarray((len(d_list),len(n_list)))
     results.fill(0)
     for i in range(niter):
-        print "starting iteration ", i
+        print("starting iteration ", i)
         iter_start = time.time()
         for n in n_list:
             for d in d_list:
-                print "\t with n =",n,",  d =",d
+                print("\t with n =",n,",  d =",d)
                 G = generate_random_graph(n,d)
                 M = nx.Graph()
                 a = time.time()
                 MM = find_maximum_matching(G, M)
                 b = time.time()
                 results[d_list.index(d)][n_list.index(n)] += b - a
-                print "\t\tTook ", b-a
+                print("\t\tTook ", b-a)
         iter_end = time.time()
-        print "Iteration ", i, " took ", iter_end - iter_start
+        print("Iteration ", i, " took ", iter_end - iter_start)
     
     results /= float(niter)
-    print results
+    print(results)
     np.save("seq_results", results)
     
     sparse_results = np.ndarray((1,len(n_list)))
     sparse_results.fill(0)
     for i in range(niter):
-        print "starting iteration ", i
+        print("starting iteration ", i)
         iter_start = time.time()
         for n in n_list:
-            print "\t with n =",n
+            print("\t with n =",n)
             G = generate_random_graph(n,0.1)
             M = nx.Graph()
             a = time.time()
             MM = find_maximum_matching(G, M)
             b = time.time()
             sparse_results[0][n_list.index(n)] += b - a
-            print "\t\ttook ", b-a
+            print("\t\ttook ", b-a)
         iter_end = time.time()
-        print "Iteration ", i, " took ", iter_end - iter_start
+        print("Iteration ", i, " took ", iter_end - iter_start)
     
     sparse_results /= float(niter)
-    print sparse_results
+    print(sparse_results)
     np.save("sparse_seq_results", sparse_results)
 
                     

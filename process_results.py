@@ -11,8 +11,8 @@ par = np.load(par_file)
 seq_sparse = np.load("sparse_seq_results.npy")
 par_sparse = np.load("sparse_par_results.npy")
 
-print "seq\n", seq
-print "par\n", par
+print("seq\n", seq)
+print("par\n", par)
 
 
 n = [20,50, 100, 150, 200]

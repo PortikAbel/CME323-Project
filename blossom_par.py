@@ -5,7 +5,7 @@ from multiprocessing import Pool
 from functools import partial
 import time
 
-from dist_to_root import dist_to_root
+from utils import dist_to_root, generate_random_graph
 
 def find_maximum_matching(G,M):
     P = finding_aug_path(G,M)
@@ -19,17 +19,7 @@ def find_maximum_matching(G,M):
             M.remove_edge(P[i+1],P[i+2])
         M.add_edge(P[-2],P[-1])
         return find_maximum_matching(G,M)
-    
-def generate_random_graph(n,density=0.5):
-    ## n - number of nodes
-    ## d - "density" of the graph [0,1]
-    graph = nx.Graph()
-    for i in range(n):
-        for j in range(i+1,n):
-            if np.random.uniform() < density:
-                graph.add_edge(i,j)
-    return graph 
-    
+
 def finding_aug_path(G,M,Blossom_stack=[]):
     Forest = [] #Storing the Trees
     Path = [] # The final path 

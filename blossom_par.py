@@ -65,27 +65,27 @@ def finding_aug_path(G: nx.Graph, M: nx.Graph, Blossom_stack: list[int] = []) ->
         temp = pool.map(partial_edge_function, edge_data)
         pool.terminate()
 
-        for case, result in temp: ######## could be parallelized
+        for case, returned_value in temp: ######## could be parallelized
             if case == 2 or case == 3:
-                return result
+                return returned_value
         # Not CASE 2 or 3
         ## check for blossoms of 3-length
-        for case, result in temp: ######## could be parallelized
-            if case == 1 and G.has_edge(v, result[1]):
+        for case, returned_value in temp: ######## could be parallelized
+            if case == 1 and G.has_edge(v, returned_value[1]):
                 #contract len 3 blossom
-                w = result[0]                
-                blossom = [v, w, result[1], v]
+                w = returned_value[0]                
+                blossom = [v, w, returned_value[1], v]
                 return par_blossom_recursion(G, M, blossom, w, Blossom_stack)
 
-        for case, result in temp:
+        for case, returned_value in temp:
             if case == 1:
-                Forest[tree_num_of_v].add_edge(v,result[0])
-                Forest[tree_num_of_v].add_edge(*result)
-                Forest_nodes.append(result[1])
+                Forest[tree_num_of_v].add_edge(v,returned_value[0])
+                Forest[tree_num_of_v].add_edge(*returned_value)
+                Forest_nodes.append(returned_value[1])
                 
     return [] #Empty Path
     
-def par_lift_blossom(blossom, aug_path, v_B):
+def par_lift_blossom(blossom, aug_path, v_B, G):
     ##Define the L_stem and R_stem
     L_stem = aug_path[0:aug_path.index(v_B)]
     R_stem = aug_path[aug_path.index(v_B)+1:]
@@ -204,7 +204,7 @@ def par_blossom_recursion(G, M, blossom, w, Blossom_stack):
     # contract blossom into single node w
     contracted_G = copy.deepcopy(G)
     contracted_M = copy.deepcopy(M)
-    for node in blossom[0:len(blossom)-1]:
+    for node in blossom[:-1]:
         if node != w:
             contracted_G = nx.contracted_nodes(contracted_G, w, node, self_loops=False)
             if node in contracted_M.nodes(): 
@@ -221,7 +221,7 @@ def par_blossom_recursion(G, M, blossom, w, Blossom_stack):
     # check if blossom exists in aug_path 
     v_B = Blossom_stack.pop()
     if (v_B in aug_path):
-        return par_lift_blossom(blossom, aug_path, v_B)
+        return par_lift_blossom(blossom, aug_path, v_B, G)
     else: # blossom is not in aug_path
         return aug_path
 
@@ -230,7 +230,7 @@ def edge_function(G,M,Forest,unmarked_edges,tree_to_root,tree_num_of_v,root_of_v
     if (e!=[] and (e in unmarked_edges or e2 in unmarked_edges)):
         w = e[1] # the other vertex of the unmarked edge
 
-        tree_num_of_w = par_is_in_tree(Forest, v)
+        tree_num_of_w = par_is_in_tree(Forest, w)
 
         if tree_num_of_w == -1:
             ## w is matched, so add e and w's matched edge to F

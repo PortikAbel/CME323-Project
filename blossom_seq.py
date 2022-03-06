@@ -11,7 +11,7 @@ def seq_is_in_tree(Forest, v):
             return tree_number
     return -1
 
-def seq_lift_blossom(blossom, aug_path, v_B):
+def seq_lift_blossom(blossom, aug_path, v_B, G):
     ##Define the L_stem and R_stem
     L_stem = aug_path[0:aug_path.index(v_B)]
     R_stem = aug_path[aug_path.index(v_B)+1:]
@@ -134,7 +134,7 @@ def seq_blossom_recursion(G, M, F, v, w, Blossom_stack):
     # contract blossom into single node w
     contracted_G = copy.deepcopy(G)
     contracted_M = copy.deepcopy(M)
-    for node in blossom:
+    for node in blossom[:-1]:
         if node != w:
             contracted_G = nx.contracted_nodes(contracted_G, w, node, self_loops=False)
             if node in contracted_M.nodes(): 
@@ -151,7 +151,7 @@ def seq_blossom_recursion(G, M, F, v, w, Blossom_stack):
     # check if blossom exists in aug_path 
     v_B = Blossom_stack.pop()
     if (v_B in aug_path):
-        return seq_lift_blossom(blossom, aug_path, v_B)
+        return seq_lift_blossom(blossom, aug_path, v_B, G)
     else: # blossom is not in aug_path
         return aug_path
 
@@ -191,7 +191,7 @@ def finding_aug_path(G: nx.Graph, M: nx.Graph, Blossom_stack: list[int] = []) ->
                 w = e[1] # the other vertex of the unmarked edge
 
                 ## check if w in F
-                tree_num_of_w = seq_is_in_tree(Forest, v)
+                tree_num_of_w = seq_is_in_tree(Forest, w)
                 
                 if tree_num_of_w == -1:
                     ## w is matched, so add e and w's matched edge to F

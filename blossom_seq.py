@@ -1,9 +1,7 @@
 import networkx as nx
-import numpy as np
 import copy
-import time
 
-from utils import dist_to_root, generate_random_graph
+from utils import dist_to_root
 
 def seq_is_in_tree(Forest, v):
     for tree_number, tree_in  in enumerate(Forest): 
@@ -11,7 +9,7 @@ def seq_is_in_tree(Forest, v):
             return tree_number
     return -1
 
-def seq_lift_blossom(blossom, aug_path, v_B, G):
+def seq_lift_blossom(blossom, aug_path, v_B, G, M):
     ##Define the L_stem and R_stem
     L_stem = aug_path[0:aug_path.index(v_B)]
     R_stem = aug_path[aug_path.index(v_B)+1:]
@@ -34,7 +32,7 @@ def seq_lift_blossom(blossom, aug_path, v_B, G):
     # if needed, create list of blossom nodes starting at base
     if blossom[0] != base:
         base_idx = blossom.index(base)
-        based_blossom = blossom[base_idx:] + blossom[:base_idx+1]
+        based_blossom = blossom[base_idx:] + blossom[1:base_idx+1]
     else:
         based_blossom = blossom
 
@@ -58,6 +56,7 @@ def seq_lift_blossom(blossom, aug_path, v_B, G):
                         else: # opposite dir path
                             lifted_blossom = based_blossom[i:]##########################
                     i += 1
+                assert len(lifted_blossom) % 2 == 1
                 return L_stem + lifted_blossom
 
         else:
@@ -75,10 +74,10 @@ def seq_lift_blossom(blossom, aug_path, v_B, G):
                         # make sure we're adding the even part to lifted path
                         if i%2 == 0: # same dir path
                             lifted_blossom = based_blossom[:i+1]
-                            #print(lifted_blossom)
                         else: # opposite dir path
                             lifted_blossom = list(reversed(based_blossom))[:-i]
                     i += 1
+                assert len(lifted_blossom) % 2 == 1
                 return lifted_blossom + R_stem
 
     else: # blossom is in the middle
@@ -98,11 +97,10 @@ def seq_lift_blossom(blossom, aug_path, v_B, G):
                         # make sure we're adding the even part to lifted path
                         if i%2 == 0: # same dir path
                             lifted_blossom = based_blossom[:i+1] 
-                            # print(lifted_blossom)
                         else: # opposite dir path
                             lifted_blossom = list(reversed(based_blossom))[:-i]
-                            # print(lifted_blossom)
                     i += 1
+                assert len(lifted_blossom) % 2 == 1
                 return L_stem + lifted_blossom + R_stem
         else: 
             # R stem to base is in matching
@@ -123,6 +121,7 @@ def seq_lift_blossom(blossom, aug_path, v_B, G):
                         else: # opposite dir path
                             lifted_blossom = based_blossom[i:] 
                     i += 1
+                assert len(lifted_blossom) % 2 == 1
                 return L_stem + lifted_blossom + R_stem
 
 def seq_blossom_recursion(G, M, F, v, w, Blossom_stack):
@@ -151,7 +150,7 @@ def seq_blossom_recursion(G, M, F, v, w, Blossom_stack):
     # check if blossom exists in aug_path 
     v_B = Blossom_stack.pop()
     if (v_B in aug_path):
-        return seq_lift_blossom(blossom, aug_path, v_B, G)
+        return seq_lift_blossom(blossom, aug_path, v_B, G, M)
     else: # blossom is not in aug_path
         return aug_path
 
@@ -229,54 +228,3 @@ def find_maximum_matching(G: nx.Graph, M: nx.Graph):
         M.add_edge(P[-2], P[-1])
         return find_maximum_matching(G, M)
 
-if __name__ == '__main__':
-    
-    n_list = [20, 50, 100, 150, 200]
-    d_list = [0.3, 0.5, 0.7, 0.9]
-    niter = 5
-
-    results = np.ndarray((len(d_list),len(n_list)))
-    results.fill(0)
-    for i in range(niter):
-        print("starting iteration ", i)
-        iter_start = time.time()
-        for n in n_list:
-            for d in d_list:
-                print("\t with n =",n,",  d =",d)
-                G = generate_random_graph(n,d)
-                M = nx.Graph()
-                a = time.time()
-                MM = find_maximum_matching(G, M)
-                b = time.time()
-                results[d_list.index(d)][n_list.index(n)] += b - a
-                print("\t\tTook ", b-a)
-        iter_end = time.time()
-        print("Iteration ", i, " took ", iter_end - iter_start)
-    
-    results /= float(niter)
-    print(results)
-    np.save("results/seq_results", results)
-    
-    sparse_results = np.ndarray((1,len(n_list)))
-    sparse_results.fill(0)
-    for i in range(niter):
-        print("starting iteration ", i)
-        iter_start = time.time()
-        for n in n_list:
-            print("\t with n =",n)
-            G = generate_random_graph(n,0.1)
-            M = nx.Graph()
-            a = time.time()
-            MM = find_maximum_matching(G, M)
-            b = time.time()
-            sparse_results[0][n_list.index(n)] += b - a
-            print("\t\ttook ", b-a)
-        iter_end = time.time()
-        print("Iteration ", i, " took ", iter_end - iter_start)
-    
-    sparse_results /= float(niter)
-    print(sparse_results)
-    np.save("results/sparse_seq_results", sparse_results)
-
-                    
-                            

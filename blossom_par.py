@@ -1,14 +1,11 @@
-from unittest import result
 import networkx as nx
-import numpy as np
 import copy
 from multiprocessing import Pool
 from functools import partial
-import time
 
-from utils import dist_to_root, generate_random_graph
+from utils import dist_to_root
 
-def find_maximum_matching(G: nx.Graph, M: nx.Graph):
+def find_maximum_matching(G: nx.Graph, M: nx.Graph) -> nx.Graph:
     P = finding_aug_path(G, M)
     if P == []: #Base Case
         return M
@@ -21,7 +18,7 @@ def find_maximum_matching(G: nx.Graph, M: nx.Graph):
         M.add_edge(P[-2], P[-1])
         return find_maximum_matching(G, M)
 
-def par_is_in_tree(Forest, v):
+def par_is_in_tree(Forest: nx.Graph, v: int) -> int:
     for tree_number, tree_in  in enumerate(Forest):  ######## could be parallelized
         if tree_in.has_node(v) == True:
             return tree_number
@@ -53,39 +50,45 @@ def finding_aug_path(G: nx.Graph, M: nx.Graph, Blossom_stack: list[int] = []) ->
         counter = counter + 1
 
     
-    for v in Forest_nodes:  
+    for v in Forest_nodes: 
+        edge_data = list(G.edges(v))
+        if len(edge_data) == 0:
+            continue
+
         tree_num_of_v = par_is_in_tree(Forest, v)
         root_of_v = tree_to_root[tree_num_of_v]
 
-        pool = Pool(processes = 4)
-        edge_data = list(G.edges(v))
+        pool = Pool(processes = min(len(edge_data), 8))
         # Feed the function all global args
         partial_edge_function = partial(edge_function,G,M,Forest,unmarked_edges,tree_to_root,tree_num_of_v,root_of_v,v,Blossom_stack)
-        #PARALLEL LOOP!
-        temp = pool.map(partial_edge_function, edge_data)
-        pool.terminate()
 
-        for case, returned_value in temp: ######## could be parallelized
+        edges_to_add = []
+        for case, returned_value in pool.imap_unordered(partial_edge_function, edge_data):
             if case == 2 or case == 3:
+                pool.terminate()
+                pool.join()
                 return returned_value
-        # Not CASE 2 or 3
+            elif case == 1:
+                edges_to_add.append(returned_value)
+        pool.close()
+        pool.join()
+
         ## check for blossoms of 3-length
-        for case, returned_value in temp: ######## could be parallelized
-            if case == 1 and G.has_edge(v, returned_value[1]):
+        for edge in edges_to_add: ######## could be parallelized
+            if G.has_edge(v, edge[1]):
                 #contract len 3 blossom
-                w = returned_value[0]                
-                blossom = [v, w, returned_value[1], v]
+                w = edge[0]                
+                blossom = [v, w, edge[1], v]
                 return par_blossom_recursion(G, M, blossom, w, Blossom_stack)
 
-        for case, returned_value in temp:
-            if case == 1:
-                Forest[tree_num_of_v].add_edge(v,returned_value[0])
-                Forest[tree_num_of_v].add_edge(*returned_value)
-                Forest_nodes.append(returned_value[1])
+        for edge in edges_to_add:
+            Forest[tree_num_of_v].add_edge(v,edge[0])
+            Forest[tree_num_of_v].add_edge(*edge)
+            Forest_nodes.append(edge[1])
                 
     return [] #Empty Path
     
-def par_lift_blossom(blossom, aug_path, v_B, G):
+def par_lift_blossom(blossom: list[int], aug_path: list[int], v_B: int, G: nx.Graph, M: nx.Graph) -> list[int]:
     ##Define the L_stem and R_stem
     L_stem = aug_path[0:aug_path.index(v_B)]
     R_stem = aug_path[aug_path.index(v_B)+1:]
@@ -109,7 +112,7 @@ def par_lift_blossom(blossom, aug_path, v_B, G):
     # if needed, create list of blossom nodes starting at base
     if blossom[0] != base:
         base_idx = blossom.index(base)
-        based_blossom = blossom[base_idx:] + blossom[:base_idx+1]
+        based_blossom = blossom[base_idx:] + blossom[1:base_idx+1]
     else:
         based_blossom = blossom
 
@@ -150,7 +153,6 @@ def par_lift_blossom(blossom, aug_path, v_B, G):
                         # make sure we're adding the even part to lifted path
                         if i%2 == 0: # same dir path
                             lifted_blossom = based_blossom[:i+1]
-                            print(lifted_blossom)
                         else: # opposite dir path
                             lifted_blossom = list(reversed(based_blossom))[:-i]
                     i += 1
@@ -173,10 +175,8 @@ def par_lift_blossom(blossom, aug_path, v_B, G):
                         # make sure we're adding the even part to lifted path
                         if i%2 == 0: # same dir path
                             lifted_blossom = based_blossom[:i+1] 
-                            # print(lifted_blossom)
                         else: # opposite dir path
                             lifted_blossom = list(reversed(based_blossom))[:-i]
-                            # print(lifted_blossom)
                     i += 1
                 return L_stem + lifted_blossom + R_stem
         else: 
@@ -200,7 +200,7 @@ def par_lift_blossom(blossom, aug_path, v_B, G):
                     i += 1
                 return L_stem + list((lifted_blossom)) + R_stem
 
-def par_blossom_recursion(G, M, blossom, w, Blossom_stack):
+def par_blossom_recursion(G: nx.Graph, M: nx.Graph, blossom: list[int], w: int, Blossom_stack: list[int]) -> list[int]:
     # contract blossom into single node w
     contracted_G = copy.deepcopy(G)
     contracted_M = copy.deepcopy(M)
@@ -221,11 +221,13 @@ def par_blossom_recursion(G, M, blossom, w, Blossom_stack):
     # check if blossom exists in aug_path 
     v_B = Blossom_stack.pop()
     if (v_B in aug_path):
-        return par_lift_blossom(blossom, aug_path, v_B, G)
+        return par_lift_blossom(blossom, aug_path, v_B, G, M)
     else: # blossom is not in aug_path
         return aug_path
 
-def edge_function(G,M,Forest,unmarked_edges,tree_to_root,tree_num_of_v,root_of_v,v,Blossom_stack,e):
+def edge_function(
+        G: nx.Graph,M: nx.Graph,Forest: list[nx.Graph],unmarked_edges: list[tuple], tree_to_root: dict,
+        tree_num_of_v: int,root_of_v: int,v: int,Blossom_stack: list[int],e: tuple) -> tuple:
     e2 = (e[1],e[0]) #the edge in the other order
     if (e!=[] and (e in unmarked_edges or e2 in unmarked_edges)):
         w = e[1] # the other vertex of the unmarked edge
@@ -234,7 +236,7 @@ def edge_function(G,M,Forest,unmarked_edges,tree_to_root,tree_num_of_v,root_of_v
 
         if tree_num_of_w == -1:
             ## w is matched, so add e and w's matched edge to F
-            Forest[tree_num_of_v].add_edge(e[0],e[1]) # edge {v,w} 
+            Forest[tree_num_of_v].add_edge(*e) # edge {v,w} 
             # Note: we don't add w to forest nodes b/c it's odd dist from root
             # assert(M.has_node(w))
             edge_w = list(M.edges(w))[0] # get edge {w,x}
@@ -242,7 +244,6 @@ def edge_function(G,M,Forest,unmarked_edges,tree_to_root,tree_num_of_v,root_of_v
 
         else: ## w is in Forest
             root_of_w = tree_to_root[tree_num_of_w]
-            tree_of_w = Forest[tree_num_of_w]
             if dist_to_root(w,root_of_w,Forest[tree_num_of_w])%2 == 0:
                 if (tree_num_of_v != tree_num_of_w):
                     ##Shortest path from root(v)--->v-->w---->root(w)
@@ -251,63 +252,11 @@ def edge_function(G,M,Forest,unmarked_edges,tree_to_root,tree_num_of_v,root_of_v
                     return (2,path_in_v + path_in_w)
                 else: ##Contract the blossom
                     # create blossom
-                    blossom = nx.shortest_path(tree_num_of_w, source=v, target=w)
+                    blossom = nx.shortest_path(Forest[tree_num_of_w], source=v, target=w)
                     blossom.append(v)
                     return (3, par_blossom_recursion(G, M, blossom, w, Blossom_stack))
-            else:   #CASE 4
-                return (4,0)     
-
-if __name__ == '__main__':
-    n_list = [20, 50, 100, 150, 200]
-    d_list = [0.3, 0.5, 0.7, 0.9]
-    niter = 5
-
-    results = np.ndarray((len(d_list),len(n_list)))
-    results.fill(0)
-    
-    for i in range(niter):
-        iter_start = time.time()
-        print("starting round ", i)
-        for n in n_list:
-            for d in d_list:
-                print("\t starting n=",n,"d=",d)
-                G = generate_random_graph(n,d)
-                M = nx.Graph()
-                Blossom_stack = []
-                a = time.time()
-                MM = find_maximum_matching(G, M)
-                b = time.time()
-                results[d_list.index(d)][n_list.index(n)] += b - a
-                print("\t\tTook ", b-a)
-        iter_end = time.time()
-        print("Iteration ", i, " took ", iter_end - iter_start)
-
-    results /= float(niter)
-    print("final matrix: ",results)
-    np.save("results/par_results", results)
-
-    
-    sparse_results = np.ndarray((1,len(n_list)))
-    sparse_results.fill(0)
-    for i in range(niter):
-        print("starting iteration ", i)
-        iter_start = time.time()
-        for n in n_list:
-            print("\t with n =",n)
-            G = generate_random_graph(n,0.1)
-            M = nx.Graph()
-            a = time.time()
-            MM = find_maximum_matching(G, M)
-            b = time.time()
-            sparse_results[0][n_list.index(n)] += b - a
-            print("\t\ttook ", b-a)
-        iter_end = time.time()
-        print("Iteration ", i, " took ", iter_end - iter_start)
-    
-    sparse_results /= float(niter)
-    print(sparse_results)
-    np.save("results/sparse_par_results", sparse_results)
-
+    #CASE 4 -- do nothing
+    return (4,0)
 
 
                     

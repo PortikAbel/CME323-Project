@@ -124,7 +124,7 @@ def seq_lift_blossom(blossom, aug_path, v_B, G, M):
                 assert len(lifted_blossom) % 2 == 1
                 return L_stem + lifted_blossom + R_stem
 
-def seq_blossom_recursion(G, M, F, v, w, Blossom_stack):
+def seq_blossom_recursion(G, M, F, v, w):
     # create blossom
     blossom = nx.shortest_path(F, source=v, target=w)
     blossom.append(v)
@@ -141,20 +141,17 @@ def seq_blossom_recursion(G, M, F, v, w, Blossom_stack):
                 contracted_M.remove_node(node)
                 contracted_M.remove_node(edge_rm[1])
                 #assert(len(list(contracted_M.nodes()))%2 == 0)
-    # add blossom to our stack
-    Blossom_stack.append(w)
 
     # recurse
-    aug_path = finding_aug_path(contracted_G, contracted_M, Blossom_stack)
+    aug_path = finding_aug_path(contracted_G, contracted_M)
 
     # check if blossom exists in aug_path 
-    v_B = Blossom_stack.pop()
-    if (v_B in aug_path):
-        return seq_lift_blossom(blossom, aug_path, v_B, G, M)
+    if (w in aug_path):
+        return seq_lift_blossom(blossom, aug_path, w, G, M)
     else: # blossom is not in aug_path
         return aug_path
 
-def finding_aug_path(G: nx.Graph, M: nx.Graph, Blossom_stack: list[int] = []) -> list[int]:
+def finding_aug_path(G: nx.Graph, M: nx.Graph) -> list[int]:
     Forest: list[nx.Graph] = [] #Storing the Forest as list of graphs
 
     unmarked_edges = list(set(G.edges()) - set(M.edges()))
@@ -211,7 +208,7 @@ def finding_aug_path(G: nx.Graph, M: nx.Graph, Blossom_stack: list[int] = []) ->
                             path_in_w = nx.shortest_path(Forest[tree_num_of_w], source = w, target = root_of_w)
                             return path_in_v + path_in_w
                         else: ##Contract the blossom
-                            return seq_blossom_recursion(G, M, tree_of_w, v, w, Blossom_stack)
+                            return seq_blossom_recursion(G, M, tree_of_w, v, w)
                     # if odd, do nothing.
     ##IF Nothing is Found
     return [] ##Empty Path

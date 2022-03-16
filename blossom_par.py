@@ -24,7 +24,7 @@ def par_is_in_tree(Forest: nx.Graph, v: int) -> int:
             return tree_number
     return -1
 
-def finding_aug_path(G: nx.Graph, M: nx.Graph, Blossom_stack: list[int] = []) -> list[int]:
+def finding_aug_path(G: nx.Graph, M: nx.Graph) -> list[int]:
     Forest: list[nx.Graph] = [] #Storing the Forest as list of graphs
 
     unmarked_edges = list(set(G.edges()) - set(M.edges()))
@@ -60,7 +60,7 @@ def finding_aug_path(G: nx.Graph, M: nx.Graph, Blossom_stack: list[int] = []) ->
 
         pool = Pool(processes = min(len(edge_data), 8))
         # Feed the function all global args
-        partial_edge_function = partial(edge_function,G,M,Forest,unmarked_edges,tree_to_root,tree_num_of_v,root_of_v,v,Blossom_stack)
+        partial_edge_function = partial(edge_function,G,M,Forest,unmarked_edges,tree_to_root,tree_num_of_v,root_of_v,v)
 
         edges_to_add = []
         for case, returned_value in pool.imap_unordered(partial_edge_function, edge_data):
@@ -79,7 +79,7 @@ def finding_aug_path(G: nx.Graph, M: nx.Graph, Blossom_stack: list[int] = []) ->
                 #contract len 3 blossom
                 w = edge[0]                
                 blossom = [v, w, edge[1], v]
-                return par_blossom_recursion(G, M, blossom, w, Blossom_stack)
+                return par_blossom_recursion(G, M, blossom, w)
 
         for edge in edges_to_add:
             Forest[tree_num_of_v].add_edge(v,edge[0])
@@ -200,7 +200,7 @@ def par_lift_blossom(blossom: list[int], aug_path: list[int], v_B: int, G: nx.Gr
                     i += 1
                 return L_stem + list((lifted_blossom)) + R_stem
 
-def par_blossom_recursion(G: nx.Graph, M: nx.Graph, blossom: list[int], w: int, Blossom_stack: list[int]) -> list[int]:
+def par_blossom_recursion(G: nx.Graph, M: nx.Graph, blossom: list[int], w: int) -> list[int]:
     # contract blossom into single node w
     contracted_G = copy.deepcopy(G)
     contracted_M = copy.deepcopy(M)
@@ -212,22 +212,19 @@ def par_blossom_recursion(G: nx.Graph, M: nx.Graph, blossom: list[int], w: int, 
                 contracted_M.remove_node(node)
                 contracted_M.remove_node(edge_rm[1])
                 # assert(len(list(contracted_M.nodes()))%2 == 0)
-    # add blossom to our stack
-    Blossom_stack.append(w)
 
     # recurse
-    aug_path = finding_aug_path(contracted_G, contracted_M, Blossom_stack)
+    aug_path = finding_aug_path(contracted_G, contracted_M)
 
     # check if blossom exists in aug_path 
-    v_B = Blossom_stack.pop()
-    if (v_B in aug_path):
-        return par_lift_blossom(blossom, aug_path, v_B, G, M)
+    if (w in aug_path):
+        return par_lift_blossom(blossom, aug_path, w, G, M)
     else: # blossom is not in aug_path
         return aug_path
 
 def edge_function(
         G: nx.Graph,M: nx.Graph,Forest: list[nx.Graph],unmarked_edges: list[tuple], tree_to_root: dict,
-        tree_num_of_v: int,root_of_v: int,v: int,Blossom_stack: list[int],e: tuple) -> tuple:
+        tree_num_of_v: int,root_of_v: int,v: int,e: tuple) -> tuple:
     e2 = (e[1],e[0]) #the edge in the other order
     if (e!=[] and (e in unmarked_edges or e2 in unmarked_edges)):
         w = e[1] # the other vertex of the unmarked edge
@@ -254,7 +251,7 @@ def edge_function(
                     # create blossom
                     blossom = nx.shortest_path(Forest[tree_num_of_w], source=v, target=w)
                     blossom.append(v)
-                    return (3, par_blossom_recursion(G, M, blossom, w, Blossom_stack))
+                    return (3, par_blossom_recursion(G, M, blossom, w))
     #CASE 4 -- do nothing
     return (4,0)
 

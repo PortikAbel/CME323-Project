@@ -20,7 +20,6 @@ def main():
           for d in d_list:
               G = nx.erdos_renyi_graph(n,d)
               M = nx.Graph()
-              Blossom_stack = []
 
               print("\t starting sequential test with n={} d={}".format(n, d))
               a = time.time()

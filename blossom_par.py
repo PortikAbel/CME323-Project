@@ -1,9 +1,10 @@
 import networkx as nx
 import copy
-from multiprocessing import Pool
+import multiprocessing as mp
 from functools import partial
 
 from utils import dist_to_root
+from NoDaemonPool import NoDaemonPool
 
 def find_maximum_matching(G: nx.Graph, M: nx.Graph) -> nx.Graph:
     P = finding_aug_path(G, M)
@@ -11,12 +12,12 @@ def find_maximum_matching(G: nx.Graph, M: nx.Graph) -> nx.Graph:
         return M
 
     #Augment P to M
-        ##Add the alternating edges of P to M
-        for i in range(0, len(P)-2,2): ######## could be parallelized
-            M.add_edge(P[i], P[i+1])
-            M.remove_edge(P[i+1], P[i+2])
-        M.add_edge(P[-2], P[-1])
-        return find_maximum_matching(G, M)
+    ##Add the alternating edges of P to M
+    for i in range(0, len(P)-2,2): ######## could be parallelized
+        M.add_edge(P[i], P[i+1])
+        M.remove_edge(P[i+1], P[i+2])
+    M.add_edge(P[-2], P[-1])
+    return find_maximum_matching(G, M)
 
 def par_is_in_tree(Forest: nx.DiGraph, v: int) -> int:
     for tree_number, tree_in  in enumerate(Forest):  ######## could be parallelized
@@ -55,7 +56,8 @@ def finding_aug_path(G: nx.Graph, M: nx.Graph) -> list[int]:
 
         tree_num_of_v = par_is_in_tree(Forest, v)
 
-        pool = Pool(processes = min(len(edge_data), 8))
+        num_cores = mp.cpu_count()
+        pool = NoDaemonPool(processes= num_cores)
         # Feed the function all global args
         partial_edge_function = partial(edge_function,G,M,Forest,unmarked_edges,tree_to_root,tree_num_of_v,v)
 
@@ -67,8 +69,6 @@ def finding_aug_path(G: nx.Graph, M: nx.Graph) -> list[int]:
                 pool.terminate()
                 pool.join()
                 return returned_value
-            elif case == 1:
-                edges_to_add.append(returned_value)
         pool.close()
         pool.join()
 

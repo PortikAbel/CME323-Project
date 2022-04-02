@@ -18,7 +18,7 @@ def main():
       print("starting round ", i)
       for n in n_list:
           for d in d_list:
-              G = nx.erdos_renyi_graph(n,d)
+              G = nx.read_adjlist("inputs/ER_n{0}_d{1}_{2}.adjlist".format(n, d, i))
               M = nx.Graph()
 
               print("\t starting sequential test with n={} d={}".format(n, d))

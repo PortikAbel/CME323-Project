@@ -3,7 +3,7 @@ import copy
 
 from utils import dist_to_root
 
-def seq_is_in_tree(Forest, v):
+def seq_is_in_tree(Forest: nx.DiGraph, v: int) -> int:
     for tree_number, tree_in  in enumerate(Forest): 
         if tree_in.has_node(v) == True:
             return tree_number
@@ -125,34 +125,36 @@ def seq_lift_blossom(blossom, aug_path, v_B, G, M):
                 return L_stem + lifted_blossom + R_stem
 
 def seq_blossom_recursion(G, M, F, v, w):
+    # base of the blossom
+    b = nx.lowest_common_ancestor(F, v, w)
     # create blossom
-    blossom = nx.shortest_path(F, source=v, target=w)
-    blossom.append(v)
+    blossom = nx.shortest_path(F, source=b, target=w) + list(reversed(nx.shortest_path(F, source=b, target=v)))
 
     # assert(len(blossom)%2 == 0)
-    # contract blossom into single node w
+    # contract blossom into single node b
     contracted_G = copy.deepcopy(G)
     contracted_M = copy.deepcopy(M)
     for node in blossom[:-1]:
-        if node != w:
-            contracted_G = nx.contracted_nodes(contracted_G, w, node, self_loops=False)
-            if node in contracted_M.nodes(): 
-                edge_rm = list(M.edges(node))[0] #this will be exactly one edge
-                contracted_M.remove_node(node)
-                contracted_M.remove_node(edge_rm[1])
-                #assert(len(list(contracted_M.nodes()))%2 == 0)
+        if node != b:
+            contracted_G = nx.contracted_nodes(contracted_G, b, node, self_loops=False)
+            contracted_M = nx.contracted_nodes(contracted_M, b, node, self_loops=False)
+            # if node in contracted_M.nodes(): 
+            #     edge_rm = list(M.edges(node))[0] #this will be exactly one edge
+            #     contracted_M.remove_node(node)
+            #     contracted_M.remove_node(edge_rm[1])
+            #     #assert(len(list(contracted_M.nodes()))%2 == 0)
 
     # recurse
     aug_path = finding_aug_path(contracted_G, contracted_M)
 
     # check if blossom exists in aug_path 
-    if (w in aug_path):
-        return seq_lift_blossom(blossom, aug_path, w, G, M)
+    if (b in aug_path):
+        return seq_lift_blossom(blossom, aug_path, b, G, M)
     else: # blossom is not in aug_path
         return aug_path
 
 def finding_aug_path(G: nx.Graph, M: nx.Graph) -> list[int]:
-    Forest: list[nx.Graph] = [] #Storing the Forest as list of graphs
+    Forest: list[nx.DiGraph] = [] #Storing the Forest as list of graphs
 
     unmarked_edges = list(set(G.edges()) - set(M.edges()))
     Forest_nodes = []
@@ -163,22 +165,21 @@ def finding_aug_path(G: nx.Graph, M: nx.Graph) -> list[int]:
     ##List of exposed vertices - ROOTS OF TREES
     exp_vertex = list(set(G.nodes()) - set(M.nodes()))
     
-    counter = 0
     #List of trees with the exposed vertices as the roots
-    for v in exp_vertex:  
-        temp = nx.Graph()
+    for i, v in enumerate(exp_vertex):  
+        temp = nx.DiGraph()
         temp.add_node(v)
         Forest.append(temp)
         Forest_nodes.append(v)
 
         #link each root to its tree
-        tree_to_root[counter] = v
-        root_to_tree[v] = counter
-        counter = counter + 1
+        tree_to_root[i] = v
+        root_to_tree[v] = i
 
     
     for v in Forest_nodes:
         tree_num_of_v = seq_is_in_tree(Forest, v)
+        tree_of_v = Forest[tree_num_of_v]
         root_of_v = tree_to_root[tree_num_of_v]
 
         for e in G.edges(v):
@@ -191,22 +192,22 @@ def finding_aug_path(G: nx.Graph, M: nx.Graph) -> list[int]:
                 
                 if tree_num_of_w == -1:
                     ## w is matched, so add e and w's matched edge to F
-                    Forest[tree_num_of_v].add_edge(*e) # edge {v,w}
+                    tree_of_v.add_edge(*e) # edge {v,w}
                     # Note: we don't add w to forest nodes b/c it's odd dist from root
                     #assert(M.has_node(w))
                     edge_w = list(M.edges(w))[0] # get edge {w,x}
-                    Forest[tree_num_of_v].add_edge(*edge_w) # add edge{w,x}
+                    tree_of_v.add_edge(*edge_w) # add edge{w,x}
                     Forest_nodes.append(edge_w[1]) ## add {x} to the list of forest nodes
 
                 else: ## w is in Forest
                     root_of_w = tree_to_root[tree_num_of_w]
                     tree_of_w = Forest[tree_num_of_w]
-                    if dist_to_root(w,root_of_w,Forest[tree_num_of_w])%2 == 0:
+                    if dist_to_root(w,root_of_w,tree_of_w)%2 == 0:
                         if (tree_num_of_v != tree_num_of_w):
                             ##Shortest path from root(v)--->v-->w---->root(w)
-                            path_in_v = nx.shortest_path(Forest[tree_num_of_v], source = root_of_v, target = v)
-                            path_in_w = nx.shortest_path(Forest[tree_num_of_w], source = w, target = root_of_w)
-                            return path_in_v + path_in_w
+                            path_in_v = nx.shortest_path(tree_of_v, source = root_of_v, target = v)
+                            path_in_w = nx.shortest_path(tree_of_w, source = root_of_w, target = w)
+                            return path_in_v + list(reversed(path_in_w))
                         else: ##Contract the blossom
                             return seq_blossom_recursion(G, M, tree_of_w, v, w)
                     # if odd, do nothing.
@@ -217,11 +218,11 @@ def find_maximum_matching(G: nx.Graph, M: nx.Graph):
     P = finding_aug_path(G, M)
     if P == []:#Base Case
         return M
-    else: #Augment P to M
-        ##Add the alternating edges of P to M
-        for i in range(0, len(P)-2,2): 
-            M.add_edge(P[i], P[i+1])
-            M.remove_edge(P[i+1], P[i+2])
-        M.add_edge(P[-2], P[-1])
-        return find_maximum_matching(G, M)
+    #Augment P to M
+    ##Add the alternating edges of P to M
+    for i in range(0, len(P)-2,2): 
+        M.add_edge(P[i], P[i+1])
+        M.remove_edge(P[i+1], P[i+2])
+    M.add_edge(P[-2], P[-1])
+    return find_maximum_matching(G, M)
 

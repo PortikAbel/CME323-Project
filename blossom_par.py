@@ -72,17 +72,19 @@ def finding_aug_path(G: nx.Graph, M: nx.Graph) -> list[int]:
         pool.close()
         pool.join()
 
-        ## check for blossoms of 3-length
-        for edge in edges_to_add: ######## could be parallelized
-            if G.has_edge(v, edge[1]):
-                #contract len 3 blossom
-                w = edge[0]                
-                blossom = [v, w, edge[1], v]
-                return par_blossom_recursion(G, M, blossom, w)
+        tree_of_v = Forest[tree_num_of_v]
 
         for edge in edges_to_add:
-            Forest[tree_num_of_v].add_edge(v,edge[0])
-            Forest[tree_num_of_v].add_edge(*edge)
+            tree_of_v.add_edge(v,edge[0])
+        
+        ## check for blossoms of 3-length
+        for edge in edges_to_add: ######## could be parallelized
+            if tree_of_v.has_edge(v, edge[1]):
+                #contract len 3 blossom
+                return par_blossom_recursion(G, M, tree_of_v, *edge)
+
+        for edge in edges_to_add:
+            tree_of_v.add_edge(*edge)
             Forest_nodes.append(edge[1])
                 
     return [] #Empty Path
@@ -211,7 +213,7 @@ def par_blossom_recursion(G: nx.Graph, M: nx.Graph, F: nx.DiGraph, v: int, w: in
     for node in blossom[:-1]:
         if node != b:
             contracted_G = nx.contracted_nodes(contracted_G, b, node, self_loops=False)
-            contracted_M = nx.contracted_nodes(contracted_M, b, node, self_loops=False)
+            contracted_M.remove_node(node)
 
     # recurse
     aug_path = finding_aug_path(contracted_G, contracted_M)
@@ -236,9 +238,7 @@ def edge_function(
 
         if tree_num_of_w == -1:
             ## w is matched, so add e and w's matched edge to F
-            tree_of_v.add_edge(*e) # edge {v,w} 
             # Note: we don't add w to forest nodes b/c it's odd dist from root
-            # assert(M.has_node(w))
             edge_w = list(M.edges(w))[0] # get edge {w,x}
             return (1,edge_w) ## store to add to forest after parallel for
 

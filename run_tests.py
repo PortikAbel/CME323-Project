@@ -1,3 +1,4 @@
+from os import makedirs
 import networkx as nx
 import numpy as np
 import time
@@ -46,6 +47,8 @@ def main(CURRENT_TYPE):
   par_results /= float(niter)
   print("final sequential matrix: ", seq_results)
   print("final parallel matrix: ", par_results)
+  
+  makedirs("results", exist_ok=True)
   np.save(f"results/{CURRENT_TYPE}_seq", par_results)
   np.save(f"results/{CURRENT_TYPE}_par", par_results)
 

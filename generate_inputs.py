@@ -1,4 +1,5 @@
 import networkx as nx
+from os import makedirs
 from graph_types import *
 from numpy.random import normal
 
@@ -16,6 +17,7 @@ def main(CURRENT_TYPE):
   d_list = [0.1, 0.3, 0.5, 0.7, 0.9]
   niter = 5
 
+  makedirs(f"inputs/{CURRENT_TYPE}", exist_ok=True)
   for i in range(niter):
     for n in n_list:
       for d in d_list:

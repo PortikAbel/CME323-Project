@@ -4,12 +4,9 @@ import time
 
 from blossom_seq import find_maximum_matching as find_mm_seq
 from blossom_par import find_maximum_matching as find_mm_par
-from generate_inputs import CURRENT_TYPE
 from graph_types import *
 
-TEST_CASE_DIR = BARABASI_ALBERT
-
-def main():
+def main(CURRENT_TYPE):
   n_list = [20, 50, 100, 150, 200]
   d_list = [0.1, 0.3, 0.5, 0.7, 0.9]
   niter = 5
@@ -22,7 +19,7 @@ def main():
       print("starting round ", i)
       for n in n_list:
           for d in d_list:
-              G = nx.read_adjlist(f"inputs/{TEST_CASE_DIR}/n{n}_d{d}_{i}.adjlist")
+              G = nx.read_adjlist(f"inputs/{CURRENT_TYPE}/n{n}_d{d}_{i}.adjlist")
               M = nx.Graph()
 
               print(f"\t starting sequential test with n={n} d={d}")
@@ -53,4 +50,5 @@ def main():
   np.save(f"results/{CURRENT_TYPE}_par", par_results)
 
 if __name__ == '__main__':
-  main()
+  main(ERDOS_RENYI)
+  main(BARABASI_ALBERT)

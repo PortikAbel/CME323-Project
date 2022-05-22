@@ -137,12 +137,7 @@ def seq_blossom_recursion(G, M, F, v, w):
     for node in blossom[:-1]:
         if node != b:
             contracted_G = nx.contracted_nodes(contracted_G, b, node, self_loops=False)
-            contracted_M = nx.contracted_nodes(contracted_M, b, node, self_loops=False)
-            # if node in contracted_M.nodes(): 
-            #     edge_rm = list(M.edges(node))[0] #this will be exactly one edge
-            #     contracted_M.remove_node(node)
-            #     contracted_M.remove_node(edge_rm[1])
-            #     #assert(len(list(contracted_M.nodes()))%2 == 0)
+            contracted_M.remove_node(node)
 
     # recurse
     aug_path = finding_aug_path(contracted_G, contracted_M)

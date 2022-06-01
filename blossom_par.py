@@ -63,15 +63,14 @@ def finding_aug_path(G: nx.Graph, M: nx.Graph) -> list[int]:
 
         num_cores = mp.cpu_count()
         pool = NoDaemonPool(processes=num_cores)
-        for case, returned_value in pool.imap_unordered(partial_edge_function, edge_data):
+        results = pool.map(partial_edge_function, edge_data)
+        pool.close()
+        pool.join()
+        for case, returned_value in results:
             if case == 1:
                 edges_to_add.append(returned_value)
             elif case == 2 or case == 3:
-                pool.terminate()
-                pool.join()
                 return returned_value
-        pool.close()
-        pool.join()
 
         tree_of_v = Forest[tree_num_of_v]
 

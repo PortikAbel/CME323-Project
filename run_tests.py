@@ -2,7 +2,6 @@ from os import makedirs, path
 import networkx as nx
 import numpy as np
 import time
-from os import getpid
 
 from blossom_seq import find_maximum_matching as find_mm_seq
 from blossom_par import find_maximum_matching as find_mm_par
@@ -18,10 +17,9 @@ def measure_runtimes_on_graph(filename):
   seq_result = b - a
 
   M = nx.Graph()
-  pid = getpid()
 
   a = time.time()
-  find_mm_par(pid, G, M)
+  find_mm_par(G, M)
   b = time.time()
   par_result = b - a
 

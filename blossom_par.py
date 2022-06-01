@@ -1,14 +1,13 @@
 import networkx as nx
 import copy
 import multiprocessing as mp
-import psutil
 from functools import partial
 
 from utils import dist_to_root
 from NoDaemonPool import NoDaemonPool
 
-def find_maximum_matching(main_process_id: int, G: nx.Graph, M: nx.Graph) -> nx.Graph:
-    P = finding_aug_path(main_process_id, G, M)
+def find_maximum_matching(G: nx.Graph, M: nx.Graph) -> nx.Graph:
+    P = finding_aug_path(G, M)
     if P == []: #Base Case
         return M
 
@@ -18,7 +17,7 @@ def find_maximum_matching(main_process_id: int, G: nx.Graph, M: nx.Graph) -> nx.
         M.add_edge(P[i], P[i+1])
         M.remove_edge(P[i+1], P[i+2])
     M.add_edge(P[-2], P[-1])
-    return find_maximum_matching(main_process_id, G, M)
+    return find_maximum_matching(G, M)
 
 def par_is_in_tree(Forest: nx.DiGraph, v: int) -> int:
     for tree_number, tree_in  in enumerate(Forest):  ######## could be parallelized
@@ -26,7 +25,7 @@ def par_is_in_tree(Forest: nx.DiGraph, v: int) -> int:
             return tree_number
     return -1
 
-def finding_aug_path(main_process_id: int, G: nx.Graph, M: nx.Graph) -> list[int]:
+def finding_aug_path(G: nx.Graph, M: nx.Graph) -> list[int]:
     Forest: list[nx.DiGraph] = [] #Storing the Forest as list of graphs
 
     unmarked_edges = list(set(G.edges()) - set(M.edges()))
@@ -59,34 +58,20 @@ def finding_aug_path(main_process_id: int, G: nx.Graph, M: nx.Graph) -> list[int
         edges_to_add = []
         # Feed the function all global args
         partial_edge_function = partial(edge_function,
-            main_process_id, G, M, Forest, unmarked_edges, tree_to_root, tree_num_of_v, v
+            G, M, Forest, unmarked_edges, tree_to_root, tree_num_of_v, v
         )
 
         num_cores = mp.cpu_count()
-        main_process = psutil.Process(main_process_id)
-        children = main_process.children(recursive=True)
-        active_processes = len(children) + 1 #plus parent
-        new_processes = min(num_cores - active_processes, len(edge_data)) #length of classes processes will be created
-        
-        #parallel
-        if new_processes > 1 :
-            pool = NoDaemonPool(processes=new_processes)
-            for case, returned_value in pool.imap_unordered(partial_edge_function, edge_data):
-                if case == 1:
-                    edges_to_add.append(returned_value)
-                elif case == 2 or case == 3:
-                    pool.terminate()
-                    pool.join()
-                    return returned_value
-            pool.close()
-            pool.join()
-        else: #serial
-            for edge in edge_data:
-                case, returned_value = partial_edge_function(edge)
-                if case == 1:
-                    edges_to_add.append(returned_value)
-                elif case == 2 or case == 3:
-                    return returned_value
+        pool = NoDaemonPool(processes=num_cores)
+        for case, returned_value in pool.imap_unordered(partial_edge_function, edge_data):
+            if case == 1:
+                edges_to_add.append(returned_value)
+            elif case == 2 or case == 3:
+                pool.terminate()
+                pool.join()
+                return returned_value
+        pool.close()
+        pool.join()
 
         tree_of_v = Forest[tree_num_of_v]
 
@@ -97,7 +82,7 @@ def finding_aug_path(main_process_id: int, G: nx.Graph, M: nx.Graph) -> list[int
         for edge in edges_to_add: ######## could be parallelized
             if tree_of_v.has_edge(v, edge[1]):
                 #contract len 3 blossom
-                return par_blossom_recursion(main_process_id, G, M, tree_of_v, *edge)
+                return par_blossom_recursion(G, M, tree_of_v, *edge)
 
         for edge in edges_to_add:
             tree_of_v.add_edge(*edge)
@@ -217,7 +202,7 @@ def par_lift_blossom(blossom: list[int], aug_path: list[int], v_B: int, G: nx.Gr
                     i += 1
                 return L_stem + list((lifted_blossom)) + R_stem
 
-def par_blossom_recursion(main_process_id: int, G: nx.Graph, M: nx.Graph, F: nx.DiGraph, v: int, w: int) -> list[int]:
+def par_blossom_recursion(G: nx.Graph, M: nx.Graph, F: nx.DiGraph, v: int, w: int) -> list[int]:
     # base of the blossom
     b = nx.lowest_common_ancestor(F, v, w)
     # create blossom
@@ -232,7 +217,7 @@ def par_blossom_recursion(main_process_id: int, G: nx.Graph, M: nx.Graph, F: nx.
             contracted_M.remove_node(node)
 
     # recurse
-    aug_path = finding_aug_path(main_process_id, contracted_G, contracted_M)
+    aug_path = finding_aug_path(contracted_G, contracted_M)
 
     # check if blossom exists in aug_path 
     if (b in aug_path):
@@ -241,10 +226,9 @@ def par_blossom_recursion(main_process_id: int, G: nx.Graph, M: nx.Graph, F: nx.
         return aug_path
 
 def edge_function(
-        main_process_id: int, G: nx.Graph, M: nx.Graph,
-        Forest: list[nx.DiGraph], unmarked_edges: list[tuple],
-        tree_to_root: dict, tree_num_of_v: int,
-        v: int,e: tuple) -> tuple:
+        G: nx.Graph, M: nx.Graph, Forest: list[nx.DiGraph],
+        unmarked_edges: list[tuple], tree_to_root: dict,
+        tree_num_of_v: int, v: int, e: tuple) -> tuple:
     e2 = (e[1],e[0]) #the edge in the other order
     root_of_v = tree_to_root[tree_num_of_v]
     tree_of_v = Forest[tree_num_of_v]
@@ -270,7 +254,7 @@ def edge_function(
                     path_in_w = nx.shortest_path(tree_of_w, source = root_of_w, target = w)
                     return (2,path_in_v + list(reversed(path_in_w)))
                 else: ##Contract the blossom
-                    return (3, par_blossom_recursion(main_process_id, G, M, tree_of_w, v, w))
+                    return (3, par_blossom_recursion(G, M, tree_of_w, v, w))
     #CASE 4 -- do nothing
     return (4,0)
 

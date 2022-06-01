@@ -1,3 +1,4 @@
+from os import makedirs
 import networkx as nx
 import numpy as np
 import time
@@ -5,51 +6,53 @@ from os import getpid
 
 from blossom_seq import find_maximum_matching as find_mm_seq
 from blossom_par import find_maximum_matching as find_mm_par
+from graph_types import *
 
-def main():
+def main(CURRENT_TYPE):
   n_list = [20, 50, 100, 150, 200]
   d_list = [0.1, 0.3, 0.5, 0.7, 0.9]
   niter = 5
 
   pid = getpid()
 
-  seq_results = np.zeros((len(d_list),len(n_list)))
-  par_results = np.zeros((len(d_list),len(n_list)))
+  seq_results = np.zeros((len(d_list),len(n_list),niter))
+  par_results = np.zeros((len(d_list),len(n_list),niter))
   
   for i in range(niter):
       iter_start = time.time()
       print("starting round ", i)
       for n in n_list:
           for d in d_list:
-              G = nx.read_adjlist("inputs/erdos_renyi/n{0}_d{1}_{2}.adjlist".format(n, d, i))
+              G = nx.read_adjlist(f"inputs/{CURRENT_TYPE}/n{n}_d{d}_{i}.adjlist")
               M = nx.Graph()
 
-              print("\t starting sequential test with n={} d={}".format(n, d))
+              print(f"\t starting sequential test with n={n} d={d}")
               a = time.time()
               find_mm_seq(G, M)
               b = time.time()
               
-              seq_results[d_list.index(d)][n_list.index(n)] += b - a
+              seq_results[d_list.index(d)][n_list.index(n)][i] = b - a
               print("\t\tTook ", b-a)
 
               M = nx.Graph()
 
-              print("\t starting parallel test with n={} d={}".format(n, d))
+              print(f"\t starting parallel test with n={n} d={d}")
               a = time.time()
               find_mm_par(pid, G, M)
               b = time.time()
               
-              par_results[d_list.index(d)][n_list.index(n)] += b - a
+              par_results[d_list.index(d)][n_list.index(n)][i] = b - a
               print("\t\tTook ", b-a)
       iter_end = time.time()
-      print("Iteration ", i, " took ", iter_end - iter_start)
+      print(f"Iteration {i} took {iter_end - iter_start}")
 
-  seq_results /= float(niter)
-  par_results /= float(niter)
   print("final sequential matrix: ", seq_results)
   print("final parallel matrix: ", par_results)
-  np.save("results/ER_seq", seq_results)
-  np.save("results/ER_par", par_results)
+  
+  makedirs("results", exist_ok=True)
+  np.save(f"results/{CURRENT_TYPE}_seq", seq_results)
+  np.save(f"results/{CURRENT_TYPE}_par", par_results)
 
 if __name__ == '__main__':
-  main()
+  main(ERDOS_RENYI)
+  main(BARABASI_ALBERT)

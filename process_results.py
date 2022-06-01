@@ -1,34 +1,46 @@
 import numpy as np 
 import matplotlib.pyplot as plt
-import matplotlib.axes as ax
-#import sys
+from matplotlib.widgets import RadioButtons
+from graph_types import *
 
-seq_file = "results/seq_results.npy"
-par_file = "results/par_results.npy"
+SEQ = 'seq'
+PAR = 'par'
 
-seq = np.load(seq_file)
-par = np.load(par_file)
-#seq_sparse = np.load("sparse_seq_results.npy")
-#par_sparse = np.load("sparse_par_results.npy")
+def load_result(graph_type, algo_type):
+  return np.load(f'results/{graph_type}_{algo_type}.npy')
 
-print("seq\n", seq)
-print("par\n", par)
+def main(graph_type):
+  n_list = ['20', '50', '100', '150', '200']
+  d_list = ['0.1', '0.3', '0.5', '0.7', '0.9']
+  n_boxes = len(n_list)
 
+  fig = plt.figure()
+  fig.suptitle(graph_type)
+  axs = fig.subplots(1, 3)
+  axs[0].sharey(axs[1])
 
-n = [20,50, 100, 150, 200]
-#plt.semilogy(n, seq_sparse[0], 'm^:', label="Seq, d=0.1")
-plt.semilogy(n, seq[0], 'm^-.', label="Seq, d=0.3")
-plt.semilogy(n, seq[1], 'm^--', label="Seq, d=0.5") 
-plt.semilogy(n, seq[2], 'm^--', label="Seq, d=0.7")
-plt.semilogy(n, seq[3], 'm^-', label="Seq, d=0.9")
-#plt.semilogy(n, par_sparse[0], 'co:', label="Par, d=0.1")
-plt.semilogy(n, par[0], 'co-.', label="Par, d=0.3")
-plt.semilogy(n, par[1], 'co-.', label="Par, d=0.5")
-plt.semilogy(n, par[2], 'co--', label="Par, d=0.7")
-plt.semilogy(n, par[3], 'co-', label="Par, d=0.9")
-plt.axis([10,210,0,750])
-plt.ylabel('Time')
-plt.xlabel('Number of Vertices')
-plt.title('Sequential vs Parallel Blossom Performance')
-plt.legend(loc='lower right')
-plt.show()
+  result = []
+  for algo_type in [SEQ, PAR]:
+    result.append(load_result(graph_type, algo_type))
+
+  def redraw_results_with_density(d):
+    for column_index, algo_type in enumerate([SEQ, PAR]):
+      ax = axs[column_index]
+      ax.set_yscale('linear')
+      ax.cla()
+      ax.boxplot(result[column_index][d_list.index(d)])
+      ax.set_yscale('log')
+      ax.set_title(f'{algo_type}: d={d}')
+      ax.set_xticks(list(range(1, n_boxes+1)))
+      ax.set_xticklabels(n_list)
+      plt.draw()
+
+  redraw_results_with_density(d_list[0])
+
+  radio_button = RadioButtons(axs[2], d_list)
+  radio_button.on_clicked(redraw_results_with_density)
+
+  plt.show()
+
+if __name__ == "__main__":
+  main(BARABASI_ALBERT)

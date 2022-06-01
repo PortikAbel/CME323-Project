@@ -12,8 +12,8 @@ def main(CURRENT_TYPE):
   d_list = [0.1, 0.3, 0.5, 0.7, 0.9]
   niter = 5
 
-  seq_results = np.zeros((len(d_list),len(n_list)))
-  par_results = np.zeros((len(d_list),len(n_list)))
+  seq_results = np.zeros((len(d_list),len(n_list),niter))
+  par_results = np.zeros((len(d_list),len(n_list),niter))
   
   for i in range(niter):
       iter_start = time.time()
@@ -28,7 +28,7 @@ def main(CURRENT_TYPE):
               find_mm_seq(G, M)
               b = time.time()
               
-              seq_results[d_list.index(d)][n_list.index(n)] += b - a
+              seq_results[d_list.index(d)][n_list.index(n)][i] = b - a
               print("\t\tTook ", b-a)
 
               M = nx.Graph()
@@ -38,18 +38,16 @@ def main(CURRENT_TYPE):
               find_mm_par(G, M)
               b = time.time()
               
-              par_results[d_list.index(d)][n_list.index(n)] += b - a
+              par_results[d_list.index(d)][n_list.index(n)][i] = b - a
               print("\t\tTook ", b-a)
       iter_end = time.time()
       print(f"Iteration {i} took {iter_end - iter_start}")
 
-  seq_results /= float(niter)
-  par_results /= float(niter)
   print("final sequential matrix: ", seq_results)
   print("final parallel matrix: ", par_results)
   
   makedirs("results", exist_ok=True)
-  np.save(f"results/{CURRENT_TYPE}_seq", par_results)
+  np.save(f"results/{CURRENT_TYPE}_seq", seq_results)
   np.save(f"results/{CURRENT_TYPE}_par", par_results)
 
 if __name__ == '__main__':

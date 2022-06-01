@@ -2,6 +2,7 @@ from os import makedirs
 import networkx as nx
 import numpy as np
 import time
+from os import getpid
 
 from blossom_seq import find_maximum_matching as find_mm_seq
 from blossom_par import find_maximum_matching as find_mm_par
@@ -11,6 +12,8 @@ def main(CURRENT_TYPE):
   n_list = [20, 50, 100, 150, 200]
   d_list = [0.1, 0.3, 0.5, 0.7, 0.9]
   niter = 5
+
+  pid = getpid()
 
   seq_results = np.zeros((len(d_list),len(n_list),niter))
   par_results = np.zeros((len(d_list),len(n_list),niter))
@@ -35,7 +38,7 @@ def main(CURRENT_TYPE):
 
               print(f"\t starting parallel test with n={n} d={d}")
               a = time.time()
-              find_mm_par(G, M)
+              find_mm_par(pid, G, M)
               b = time.time()
               
               par_results[d_list.index(d)][n_list.index(n)][i] = b - a

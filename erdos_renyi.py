@@ -1,6 +1,7 @@
 import networkx as nx
 import numpy as np
 import time
+from os import getpid
 
 from blossom_seq import find_maximum_matching as find_mm_seq
 from blossom_par import find_maximum_matching as find_mm_par
@@ -10,6 +11,8 @@ def main():
   d_list = [0.1, 0.3, 0.5, 0.7, 0.9]
   niter = 5
 
+  pid = getpid()
+
   seq_results = np.zeros((len(d_list),len(n_list)))
   par_results = np.zeros((len(d_list),len(n_list)))
   
@@ -18,7 +21,7 @@ def main():
       print("starting round ", i)
       for n in n_list:
           for d in d_list:
-              G = nx.read_adjlist("inputs/ER_n{0}_d{1}_{2}.adjlist".format(n, d, i))
+              G = nx.read_adjlist("inputs/erdos_renyi/n{0}_d{1}_{2}.adjlist".format(n, d, i))
               M = nx.Graph()
 
               print("\t starting sequential test with n={} d={}".format(n, d))
@@ -33,7 +36,7 @@ def main():
 
               print("\t starting parallel test with n={} d={}".format(n, d))
               a = time.time()
-              find_mm_par(G, M)
+              find_mm_par(pid, G, M)
               b = time.time()
               
               par_results[d_list.index(d)][n_list.index(n)] += b - a
@@ -45,7 +48,7 @@ def main():
   par_results /= float(niter)
   print("final sequential matrix: ", seq_results)
   print("final parallel matrix: ", par_results)
-  np.save("results/ER_seq", par_results)
+  np.save("results/ER_seq", seq_results)
   np.save("results/ER_par", par_results)
 
 if __name__ == '__main__':

@@ -1,10 +1,9 @@
 import networkx as nx
 from os import makedirs
 from graph_types import *
-from numpy.random import normal
 
 def generate_barabasi_albert(n, d):
-  m = min(n-1, round(normal(n*d, d)))
+  m = round((n*(n-1)*d) / (2*(n+1)))
   return nx.barabasi_albert_graph(n, m)
 
 generator = {

@@ -13,8 +13,6 @@ def main(CURRENT_TYPE):
   d_list = [0.1, 0.3, 0.5, 0.7, 0.9]
   niter = 5
 
-  pid = getpid()
-
   seq_results = np.zeros((len(d_list),len(n_list),niter))
   par_results = np.zeros((len(d_list),len(n_list),niter))
   

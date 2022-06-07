@@ -26,14 +26,14 @@ def generate_barabasi_albert(n, d, initial_graph_type, m_formula_index=None):
     if d > 0.5 and n > 1 + 1/(2*d-1):
       raise BarabasiAlbertGenerationException(n, d, initial_graph_type)
     if m_formula_index == 1:
+      if d < (n-0.5)/(n**2+n):
+        raise BarabasiAlbertGenerationException(n, d, initial_graph_type)
       m = m_star_1(n, d)
     elif m_formula_index == 2:
       m = m_star_1(n, d)
     return nx.barabasi_albert_graph(n, m)
   elif initial_graph_type == 'complete':
-    if n < (1 + d + sqrt(d*(d+3))) / 2*(1-d):
-      raise BarabasiAlbertGenerationException(n, d, initial_graph_type)
-    if n < (16-d) / d:
+    if n < (3 - d + sqrt(9-d*(9-d))) / 2*d:
       raise BarabasiAlbertGenerationException(n, d, initial_graph_type)
     m = m_complete(n, d)
     return nx.barabasi_albert_graph(n, m, None, nx.complete_graph(m))

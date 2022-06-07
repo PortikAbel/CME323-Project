@@ -38,6 +38,17 @@ def main(graph_type):
       table.append(f'\t\t{d} & {np.mean(result[0][i_d][i_n])} & {np.mean(result[1][i_d][i_n])} & {np.mean(result[0][i_d][i_n] / result[1][i_d][i_n])} \\\\')
       table.append('\t\t\\hline')
     table.append('\t\\end{tabular}')
+
+    if graph_type == ERDOS_RENYI:
+      graph_type_text = 'Erdős-Rényi modellű'
+    elif graph_type == BARABASI_ALBERT + '_star_1':
+      graph_type_text = 'Barabási-Albert modellű, csillaggráfból (m=m_1) induló'
+    elif graph_type == BARABASI_ALBERT + '_star_2':
+      graph_type_text = 'Barabási-Albert modellű, csillaggráfból (m=m_2) induló'
+    elif graph_type == BARABASI_ALBERT + '_complete':
+      graph_type_text = 'Barabási-Albert modellű, teljes gráfból induló'
+    table.append(f'\t\\caption{{futási idők n={n} csúcsú {graph_type_text} véletlengráfokon}}')
+    table.append(f'\t\\label{{table:{graph_type}_n{n}}}')
     table.append('\\end{table}')
     with open(f'results/tables/{graph_type}_n{n}.tex', 'w', encoding='utf-8') as fout:
       fout.write('\n'.join(table))

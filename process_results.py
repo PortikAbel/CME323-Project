@@ -24,6 +24,24 @@ def main(graph_type):
   for algo_type in [SEQ, PAR]:
     result.append(load_result(graph_type, algo_type))
 
+
+  for i_n, n in enumerate(n_list):
+    table = [
+      '\\begin{table}[H]',
+      '\t\\centering',
+      '\t\\begin{tabular}{| c || c | c | c |}',
+      '\t\t\\hline',
+      '\t\td & szekvenciális futási idő & párhuzamos futási idő & arány \\\\',
+      '\t\t\\hline\\hline'
+    ]
+    for i_d, d in enumerate(d_list):
+      table.append(f'\t\t{d} & {np.mean(result[0][i_d][i_n])} & {np.mean(result[1][i_d][i_n])} & {np.mean(result[0][i_d][i_n] / result[1][i_d][i_n])} \\\\')
+      table.append('\t\t\\hline')
+    table.append('\t\\end{tabular}')
+    table.append('\\end{table}')
+    with open(f'results/tables/{graph_type}_n{n}.tex', 'w', encoding='utf-8') as fout:
+      fout.write('\n'.join(table))
+
   def redraw_results_with_density(d):
     for column_index, algo_type in enumerate([SEQ, PAR]):
       ax = axs[column_index]

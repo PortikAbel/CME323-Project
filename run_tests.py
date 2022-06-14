@@ -36,15 +36,17 @@ def main(CURRENT_TYPE, type_suffix=''):
   niter = 5
 
   makedirs("results", exist_ok=True)
-  seq_results_path = f"results/{CURRENT_TYPE}{type_suffix}_seq"
+  seq_results_path_no_ext = f"results/{CURRENT_TYPE}{type_suffix}_seq"
+  seq_results_path = seq_results_path_no_ext + '.npy'
   if path.exists(seq_results_path):
     seq_results = np.load(seq_results_path)
   else:
     seq_results = np.zeros((len(d_list),len(n_list),niter))
   
-  par_results_path = f"results/{CURRENT_TYPE}{type_suffix}_par"
+  par_results_path_no_ext = f"results/{CURRENT_TYPE}{type_suffix}_par"
+  par_results_path = par_results_path_no_ext + '.npy'
   if path.exists(par_results_path):
-    seq_results = np.load(par_results_path)
+    par_results = np.load(par_results_path)
   else:
     par_results = np.zeros((len(d_list),len(n_list),niter))
   
@@ -66,15 +68,15 @@ def main(CURRENT_TYPE, type_suffix=''):
           seq_results[d_list.index(d)][n_list.index(n)][i] = -1
           par_results[d_list.index(d)][n_list.index(n)][i] = -1
     iter_end = time.time()
-    np.save(seq_results_path, seq_results)
-    np.save(par_results_path, par_results)
+    np.save(seq_results_path_no_ext, seq_results)
+    np.save(par_results_path_no_ext, par_results)
     print(f"Iteration {i} took {iter_end - iter_start}")
 
   print("final sequential matrix: ", seq_results)
   print("final parallel matrix: ", par_results)
   
 if __name__ == '__main__':
-  main(ERDOS_RENYI)
+  # main(ERDOS_RENYI)
   main(BARABASI_ALBERT, '_star_1')
   main(BARABASI_ALBERT, '_star_2')
   main(BARABASI_ALBERT, '_complete')
